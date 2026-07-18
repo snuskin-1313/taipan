@@ -1,24 +1,10 @@
 #include "raylib.h"
+#include "snake_data.h"
 #include "stddef.h"
 #include "stdio.h"
 #include "stdlib.h"
 
-typedef enum GameState { MENU, PLAY, DEAD } GameState;
-typedef enum dir { U = 1, L = 2, R = 3, D = 4 } dir;
-
 // gameboard[y][x]
-
-typedef struct Coord {
-  short x;
-  short y;
-  struct Coord *next;
-} Coord;
-
-typedef struct {
-  struct Coord *head;
-  dir dir;
-  int length;
-} player_t;
 
 void init_game_board(char game_board[9][18]) {
   for (size_t i = 0; i < 9; i++) {
@@ -34,18 +20,22 @@ void update_player(player_t *player) {
   Coord *new_head = malloc(sizeof(Coord));
   switch (player->dir) {
   case U:
+    player->prev_dir = U;
     new_head->y = player->head->y - 1;
     new_head->x = player->head->x;
     break;
   case L:
+    player->prev_dir = L;
     new_head->x = player->head->x - 1;
     new_head->y = player->head->y;
     break;
   case R:
+    player->prev_dir = R;
     new_head->x = player->head->x + 1;
     new_head->y = player->head->y;
     break;
   case D:
+    player->prev_dir = D;
     new_head->y = player->head->y + 1;
     new_head->x = player->head->x;
     break;
@@ -55,6 +45,7 @@ void update_player(player_t *player) {
   if (player->length == 1) {
     free(player->head);
     new_head->next = NULL;
+    new_head->prev = NULL;
     player->head = new_head;
     printf("new_head: %hd %hd \n", player->head->y, player->head->x);
   }
@@ -65,8 +56,10 @@ void init_player(player_t *player) {
   head->x = 5;
   head->y = 4;
   head->next = NULL;
+  head->prev = NULL;
   player->head = head;
   player->dir = U;
+  player->prev_dir = D;
   player->length = 1;
 }
 
@@ -82,7 +75,25 @@ void update_board(player_t *player, char game_board[9][18]) {
   }
 }
 
-void draw_player(player_t *player, Texture2D *head) {
+void draw_neighbors(Coord *node, Texture2D *sprite) {
+  Coord *p = node->prev;
+  Coord *n = node->next;
+
+  if ((node->x == n->x && node->y > n->y) &&
+          (node->x < p->x && node->y == p->y) ||
+      (node->x == p->x && node->y > p->y) &&
+          (node->x < n->x && node->y == n->y)) {
+    DrawTexturePro(*sprite,
+                   (Rectangle){.x = 64, .y = 0, .width = 32, .height = 32},
+                   (Rectangle){.x = node->x * 32 + 48,
+                               .y = node->y * 32 + 64,
+                               .width = 32,
+                               .height = 32},
+                   (Vector2){.x = 16, .y = 16}, 0.0f, WHITE);
+  }
+}
+
+void draw_player(player_t *player, Texture2D *sprite) {
   Coord *current_node;
   current_node = player->head;
   float rot;
@@ -105,21 +116,20 @@ void draw_player(player_t *player, Texture2D *head) {
   Vector2 draw_coord;
   draw_coord.x = current_node->x;
   draw_coord.y = current_node->y;
-  DrawTexturePro(*head,
-                 (Rectangle){.x = 0.0f,
-                             .y = 0.0f,
-                             .width = (float)head->width,
-                             .height = head->height},
-                 (Rectangle){.x = current_node->x * 32 + 48,
-                             .y = current_node->y * 32 + 64,
-                             .width = 32,
-                             .height = 32},
-                 (Vector2){.x = 16, .y = 16}, rot, WHITE);
-  //  if (player->length > 1) {
-  //  while (current_node != NULL) {
-  //     int z = 69;
-  // }
-  // }
+  DrawTexturePro(
+      *sprite,
+      (Rectangle){
+          .x = 0.0f, .y = 0.0f, .width = (float)32, .height = (float)32},
+      (Rectangle){.x = current_node->x * 32 + 48,
+                  .y = current_node->y * 32 + 64,
+                  .width = 32,
+                  .height = 32},
+      (Vector2){.x = 16, .y = 16}, rot, WHITE);
+  if (player->length > 1) {
+    while (current_node->next != NULL) {
+      draw_neighbors(current_node, sprite);
+    }
+  }
 }
 
 int main() {
@@ -137,6 +147,7 @@ int main() {
   int score = 0;
   Texture2D game_board_texture = LoadTexture("assets/game_board.png");
   Texture2D snake_head = LoadTexture("assets/snake-head.png");
+  Texture2D snake_boi = LoadTexture("assets/snake_boi");
 
   while (!WindowShouldClose()) {
     int mouse_x = GetMouseX();
@@ -170,22 +181,22 @@ int main() {
         }
       }
       if (IsKeyPressed(KEY_UP)) {
-        if (Player->dir != D) {
+        if (Player->prev_dir != D) {
           Player->dir = U;
         }
       }
       if (IsKeyPressed(KEY_LEFT)) {
-        if (Player->dir != R) {
+        if (Player->prev_dir != R) {
           Player->dir = L;
         }
       }
       if (IsKeyPressed(KEY_RIGHT)) {
-        if (Player->dir != L) {
+        if (Player->prev_dir != L) {
           Player->dir = R;
         }
       }
       if (IsKeyPressed(KEY_DOWN)) {
-        if (Player->dir != U) {
+        if (Player->prev_dir != U) {
           Player->dir = D;
         }
       }
