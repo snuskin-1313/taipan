@@ -1,0 +1,226 @@
+#include "raylib.h"
+#include "stddef.h"
+#include "stdio.h"
+#include "stdlib.h"
+
+typedef enum GameState { MENU, PLAY, DEAD } GameState;
+typedef enum dir { U = 1, L = 2, R = 3, D = 4 } dir;
+
+// gameboard[y][x]
+
+typedef struct Coord {
+  short x;
+  short y;
+  struct Coord *next;
+} Coord;
+
+typedef struct {
+  struct Coord *head;
+  dir dir;
+  int length;
+} player_t;
+
+void init_game_board(char game_board[9][18]) {
+  for (size_t i = 0; i < 9; i++) {
+    for (size_t j = 0; j < 18; j++) {
+      game_board[i][j] = 0;
+      printf("%lu %lu\n", i, j);
+    }
+  }
+  // game_board[4][5] = 1;
+}
+
+void update_player(player_t *player) {
+  Coord *new_head = malloc(sizeof(Coord));
+  switch (player->dir) {
+  case U:
+    new_head->y = player->head->y - 1;
+    new_head->x = player->head->x;
+    break;
+  case L:
+    new_head->x = player->head->x - 1;
+    new_head->y = player->head->y;
+    break;
+  case R:
+    new_head->x = player->head->x + 1;
+    new_head->y = player->head->y;
+    break;
+  case D:
+    new_head->y = player->head->y + 1;
+    new_head->x = player->head->x;
+    break;
+  default:
+    break;
+  }
+  if (player->length == 1) {
+    free(player->head);
+    new_head->next = NULL;
+    player->head = new_head;
+    printf("new_head: %hd %hd \n", player->head->y, player->head->x);
+  }
+}
+
+void init_player(player_t *player) {
+  Coord *head = malloc(sizeof(Coord));
+  head->x = 5;
+  head->y = 4;
+  head->next = NULL;
+  player->head = head;
+  player->dir = U;
+  player->length = 1;
+}
+
+void update_board(player_t *player, char game_board[9][18]) {
+  if (player->head->next == NULL) {
+    return;
+  }
+  Coord *current_node;
+  current_node = player->head->next;
+  while (current_node != NULL) {
+    game_board[current_node->y][current_node->x] = 1;
+    current_node = current_node->next;
+  }
+}
+
+void draw_player(player_t *player, Texture2D *head) {
+  Coord *current_node;
+  current_node = player->head;
+  float rot;
+  switch (player->dir) {
+  case U:
+    rot = 0;
+    break;
+  case L:
+    rot = 270;
+    break;
+  case R:
+    rot = 90;
+    break;
+  case D:
+    rot = 180;
+    break;
+  default:
+    break;
+  }
+  Vector2 draw_coord;
+  draw_coord.x = current_node->x;
+  draw_coord.y = current_node->y;
+  DrawTexturePro(*head,
+                 (Rectangle){.x = 0.0f,
+                             .y = 0.0f,
+                             .width = (float)head->width,
+                             .height = head->height},
+                 (Rectangle){.x = current_node->x * 32 + 48,
+                             .y = current_node->y * 32 + 64,
+                             .width = 32,
+                             .height = 32},
+                 (Vector2){.x = 16, .y = 16}, rot, WHITE);
+  //  if (player->length > 1) {
+  //  while (current_node != NULL) {
+  //     int z = 69;
+  // }
+  // }
+}
+
+int main() {
+  int screen_width = 640;
+  int screen_height = 360;
+  InitWindow(screen_width, screen_height, "PREALPHA SNAKE");
+
+  GameState game_state = MENU;
+  float frame_time = 0.0f;
+  SetTargetFPS(60);
+  player_t *Player = malloc(sizeof(player_t));
+  init_player(Player);
+
+  char game_board[9][18];
+  int score = 0;
+  Texture2D game_board_texture = LoadTexture("assets/game_board.png");
+  Texture2D snake_head = LoadTexture("assets/snake-head.png");
+
+  while (!WindowShouldClose()) {
+    int mouse_x = GetMouseX();
+    int mouse_y = GetMouseY();
+    char mouse_text[10];
+    char player_pos[10];
+    snprintf(mouse_text, sizeof(mouse_text), "%d %d", mouse_x, mouse_y);
+    snprintf(player_pos, sizeof(player_pos), "%hd %hd", Player->head->y,
+             Player->head->x);
+    switch (game_state) {
+    case MENU:
+      if (IsKeyReleased(KEY_P)) {
+        game_state = PLAY;
+        printf("PLAYING\n");
+        init_game_board(game_board);
+      }
+      break;
+    case PLAY:
+      // printf("%02.02f\n", frame_time);
+      // if frame_time = 60:
+      // set to 0 and update position
+      // handle position conditions and kill player if invalid position
+      // read input and set direction accordingly
+      // frame_time++
+      if (frame_time >= 1.0f) {
+        frame_time = 0;
+        update_player(Player);
+        update_board(Player, game_board);
+        if (game_board[Player->head->y][Player->head->x] == 1) {
+          game_state = DEAD;
+        }
+      }
+      if (IsKeyPressed(KEY_UP)) {
+        if (Player->dir != D) {
+          Player->dir = U;
+        }
+      }
+      if (IsKeyPressed(KEY_LEFT)) {
+        if (Player->dir != R) {
+          Player->dir = L;
+        }
+      }
+      if (IsKeyPressed(KEY_RIGHT)) {
+        if (Player->dir != L) {
+          Player->dir = R;
+        }
+      }
+      if (IsKeyPressed(KEY_DOWN)) {
+        if (Player->dir != U) {
+          Player->dir = D;
+        }
+      }
+      frame_time += GetFrameTime();
+      break;
+    case DEAD:
+      break;
+    default:
+      break;
+    }
+
+    BeginDrawing();
+    switch (game_state) {
+    case MENU:
+      ClearBackground(GRAY);
+      DrawText("Pressssss P to play", 100, 100, 32, WHITE);
+      break;
+    case PLAY:
+      ClearBackground(WHITE);
+      DrawTexture(game_board_texture, 33, 49, WHITE);
+      draw_player(Player, &snake_head);
+      DrawText(mouse_text, 400, 300, 32, RED);
+      DrawText(player_pos, 300, 300, 32, RED);
+      break;
+    case DEAD:
+      ClearBackground(RED);
+      DrawText("YOUR DEAD LOL", 200, 200, 100, WHITE);
+      break;
+    default:
+      break;
+    }
+    EndDrawing();
+  }
+
+  CloseWindow();
+
+  return 0;
+}
