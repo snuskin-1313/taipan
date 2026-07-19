@@ -10,7 +10,7 @@ void init_game_board(char game_board[9][18]) {
   for (size_t i = 0; i < 9; i++) {
     for (size_t j = 0; j < 18; j++) {
       game_board[i][j] = 0;
-      printf("%lu %lu\n", i, j);
+      // printf("%lu %lu\n", i, j);
     }
   }
   // game_board[4][5] = 1;
@@ -125,10 +125,19 @@ void draw_player(player_t *player, Texture2D *sprite) {
                   .width = 32,
                   .height = 32},
       (Vector2){.x = 16, .y = 16}, rot, WHITE);
-  if (player->length > 1) {
+  if (player->length > 2) {
     while (current_node->next != NULL) {
       draw_neighbors(current_node, sprite);
+      current_node = current_node->next;
     }
+  } else if (player->length == 2) {
+    DrawTexturePro(*sprite,
+                   (Rectangle){.x = 96, .y = 0, .width = 32, .height = 32},
+                   (Rectangle){.x = current_node->next->x * 32 + 48,
+                               .y = current_node->next->y * 32 + 64,
+                               .width = 32,
+                               .height = 32},
+                   (Vector2){.x = 16, .y = 16}, rot, WHITE);
   }
 }
 
@@ -141,13 +150,20 @@ int main() {
   float frame_time = 0.0f;
   SetTargetFPS(60);
   player_t *Player = malloc(sizeof(player_t));
+  Food food;
+  food.value = 1;
+  food.x = GetRandomValue(0, 17);
+  food.y = GetRandomValue(0, 8);
+  printf("food loc: %hd %hd\n ", food.y, food.x);
   init_player(Player);
 
   char game_board[9][18];
   int score = 0;
+
   Texture2D game_board_texture = LoadTexture("assets/game_board.png");
   Texture2D snake_head = LoadTexture("assets/snake-head.png");
   Texture2D snake_boi = LoadTexture("assets/snake_boi");
+  Texture2D food_texture = LoadTexture("assets/food.png");
 
   while (!WindowShouldClose()) {
     int mouse_x = GetMouseX();
@@ -163,6 +179,7 @@ int main() {
         game_state = PLAY;
         printf("PLAYING\n");
         init_game_board(game_board);
+        game_board[food.y][food.x] = 2;
       }
       break;
     case PLAY:
@@ -178,6 +195,14 @@ int main() {
         update_board(Player, game_board);
         if (game_board[Player->head->y][Player->head->x] == 1) {
           game_state = DEAD;
+        } else if (game_board[Player->head->y][Player->head->x] == 2) {
+          score += food.value;
+          food.x = GetRandomValue(0, 17);
+          food.y = GetRandomValue(0, 8);
+          printf("food loc: %hd %hd\n ", food.y, food.x);
+          game_board[Player->head->y][Player->head->x] = 0;
+          game_board[food.y][food.x] = 2;
+          printf("%d\n", score);
         }
       }
       if (IsKeyPressed(KEY_UP)) {
@@ -218,6 +243,13 @@ int main() {
       ClearBackground(WHITE);
       DrawTexture(game_board_texture, 33, 49, WHITE);
       draw_player(Player, &snake_head);
+      DrawTexturePro(food_texture,
+                     (Rectangle){.x = 0, .y = 0, .width = 32, .height = 32},
+                     (Rectangle){.x = food.x * 32 + 48,
+                                 .y = food.y * 32 + 64,
+                                 .width = 32,
+                                 .height = 32},
+                     (Vector2){.x = 16, .y = 16}, 0, WHITE);
       DrawText(mouse_text, 400, 300, 32, RED);
       DrawText(player_pos, 300, 300, 32, RED);
       break;

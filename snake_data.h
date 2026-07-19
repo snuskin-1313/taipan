@@ -17,3 +17,9 @@ typedef struct {
   enum dir prev_dir;
   int length;
 } player_t;
+
+typedef struct Food {
+  short x;
+  short y;
+  int value;
+} Food;
