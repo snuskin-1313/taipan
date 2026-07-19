@@ -1,2 +1,2 @@
 game: main.c
-	gcc main.c -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -o game
+	gcc main.c data.c engine.c draw.c -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -o game
