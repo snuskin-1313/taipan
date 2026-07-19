@@ -26,6 +26,8 @@ typedef struct {
   int score;
   Node *food;
   dir move_dir;
+  dir prev_dir;
+  Sound sounds[2];
 } GameState;
 
 Node *make_node(short x, short y);

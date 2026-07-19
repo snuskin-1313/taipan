@@ -4,16 +4,16 @@
 #include "stdio.h"
 
 void read_input(GameState *state) {
-  if (IsKeyReleased(KEY_UP)) {
+  if (IsKeyReleased(KEY_UP) && state->prev_dir != DOWN) {
     printf("pressed UP\n");
     state->move_dir = UP;
-  } else if (IsKeyReleased(KEY_LEFT)) {
+  } else if (IsKeyReleased(KEY_LEFT) && state->prev_dir != RIGHT) {
     printf("pressed LEFT\n");
     state->move_dir = LEFT;
-  } else if (IsKeyReleased(KEY_RIGHT)) {
+  } else if (IsKeyReleased(KEY_RIGHT) && state->prev_dir != LEFT) {
     printf("pressed RIGHT\n");
     state->move_dir = RIGHT;
-  } else if (IsKeyReleased(KEY_DOWN)) {
+  } else if (IsKeyReleased(KEY_DOWN) && state->prev_dir != UP) {
     printf("pressed DOWN\n");
     state->move_dir = DOWN;
   }
@@ -104,6 +104,8 @@ void tick_update(Parent *parent, GameState *state, short **board) {
   printf("%d \n", state->move_dir);
   short tile_value = check_tile(parent, board, state->move_dir);
 
+  state->prev_dir = state->move_dir;
+
   if (tile_value == 1 || tile_value == 187) {
     state->mode = KILL;
     printf("game ended\n");
@@ -121,6 +123,8 @@ void tick_update(Parent *parent, GameState *state, short **board) {
     parent->tail = new_tail;
     parent->tail->next = NULL;
   } else if (tile_value == 2) {
+    PlaySound(state->sounds[0]);
+    state->score += 1;
     printf("tile value: %hd\n", tile_value);
 
     Node *new_head = make_head(parent, state->move_dir);
@@ -133,6 +137,9 @@ void tick_update(Parent *parent, GameState *state, short **board) {
     gen_food(state, board);
   }
 
+  // state->prev_dir = state->move_dir;
+
+  board[parent->head->y][parent->head->x] = 1;
   Node *current_node = parent->head->next;
   while (current_node != NULL) {
     board[current_node->y][current_node->x] = 1;
