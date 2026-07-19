@@ -134,7 +134,6 @@ void tick_update(Parent *parent, GameState *state, short **board) {
     parent->length += 1;
 
     board[parent->head->y][parent->head->x] = 0;
-    gen_food(state, board);
   }
 
   // state->prev_dir = state->move_dir;
@@ -145,6 +144,10 @@ void tick_update(Parent *parent, GameState *state, short **board) {
     board[current_node->y][current_node->x] = 1;
     printf("y: %hd x: %hd \n", current_node->y, current_node->x);
     current_node = current_node->next;
+  }
+
+  if (tile_value == 2) {
+    gen_food(state, board);
   }
 
   printf("end of tick update()\n---------------\n");
